@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     ObjectDetectionParameters obj_det_params;
     obj_det_params.enable_tracking = true; // track people across images flow
     obj_det_params.enable_body_fitting = false; // smooth skeletons moves
-	obj_det_params.body_format = sl::BODY_FORMAT::POSE_34;
+	obj_det_params.body_format = sl::BODY_FORMAT::POSE_18;
     obj_det_params.detection_model = isJetson ? DETECTION_MODEL::HUMAN_BODY_FAST : DETECTION_MODEL::HUMAN_BODY_ACCURATE;
     returned_state = zed.enableObjectDetection(obj_det_params);
     if (returned_state != ERROR_CODE::SUCCESS) {

@@ -86,6 +86,13 @@ void render_2D(cv::Mat &left_display, sl::float2 img_scale, std::vector<sl::Obje
 							cv::circle(left_display, cv_kp, 3, color, -1);
 					}
 				}
+
+				sl::float3 objectPosition = obj.position;
+				float distance = round(sqrtf(pow(objectPosition.x, 2) + pow(objectPosition.y, 2) + pow(objectPosition.z, 2)) / 10) / 100;
+				char distanceStringBuffer[20];
+				sprintf(distanceStringBuffer, "Distance: %.2f", distance);
+				
+				cv::putText(left_display, distanceStringBuffer, cv::Point(obj.bounding_box_2d[0].x, obj.bounding_box_2d[0].y), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0, 0, 0));
             }
 
         }
