@@ -1,4 +1,5 @@
 #include "TrackingViewer.hpp"
+#include <math.h>
 
 // -------------------------------------------------
 //            2D LEFT VIEW
@@ -90,9 +91,12 @@ void render_2D(cv::Mat &left_display, sl::float2 img_scale, std::vector<sl::Obje
 				sl::float3 objectPosition = obj.position;
 				float distance = round(sqrtf(pow(objectPosition.x, 2) + pow(objectPosition.y, 2) + pow(objectPosition.z, 2)) / 10) / 100;
 				char distanceStringBuffer[20];
-				sprintf(distanceStringBuffer, "Distance: %.2f", distance);
-				
-				cv::putText(left_display, distanceStringBuffer, cv::Point(obj.bounding_box_2d[0].x, obj.bounding_box_2d[0].y), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0, 0, 0));
+				sprintf(distanceStringBuffer, "Distance: %.2f", distance);				
+				int x = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].x));
+				x = std::min(left_display.size().width - 30, x);
+				int y = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].y));
+				y = std::min(left_display.size().height - 30, y);
+				cv::putText(left_display, distanceStringBuffer, cv::Point(x, y), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
             }
 
         }

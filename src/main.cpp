@@ -159,8 +159,8 @@ int main(int argc, char **argv) {
 			int fps = zed.getCurrentFPS();
 			auto timestamp = time_in_HH_MM_SS_MMM();
 			render_2D(image_left_ocv, img_scale, bodies.object_list, obj_det_params.enable_tracking, obj_det_params.body_format);
-			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0,0,0));
-			cv::putText(image_left_ocv, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0,0,0));
+			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
+			cv::putText(image_left_ocv, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
 			cv::imshow(window_name, image_left_ocv);
 			key = cv::waitKey(10);
         }
