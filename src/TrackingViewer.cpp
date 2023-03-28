@@ -88,8 +88,7 @@ void render_2D(cv::Mat &left_display, sl::float2 img_scale, std::vector<sl::Obje
 					}
 				}
 
-				sl::float3 objectPosition = obj.position;
-				float distance = round(sqrtf(pow(objectPosition.x, 2) + pow(objectPosition.y, 2) + pow(objectPosition.z, 2)) / 10) / 100;
+				float distance = round(sqrtf(pow(obj.bounding_box[4].x, 2) + pow(obj.bounding_box[4].y, 2) + pow(obj.bounding_box[4].z, 2)) / 10) / 100;
 				char distanceStringBuffer[20];
 				sprintf(distanceStringBuffer, "Distance: %.2f", distance);				
 				int x = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].x));
