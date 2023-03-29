@@ -1,8 +1,6 @@
 #pragma once
 
-#include <sl/Camera.hpp>
-#include "GLViewer.hpp"
-#include "TrackingViewer.hpp"
+#include "stdafx.h"
 
 namespace utils
 {

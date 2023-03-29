@@ -1,14 +1,7 @@
 #ifndef TRACKING_VIEWER_HPP
 #define TRACKING_VIEWER_HPP
 
-#include <iostream>
-#include <deque>
-#include <math.h>
-
-#include <sl/Camera.hpp>
-#include <opencv2/opencv.hpp>
-
-#include "GLViewer.hpp"
+#include "stdafx.h"
 
 // -------------------------------------------------
 //            2D LEFT VIEW

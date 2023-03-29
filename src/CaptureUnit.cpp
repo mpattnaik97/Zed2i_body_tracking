@@ -2,6 +2,49 @@
 
 bool is_playback = false;
 
+CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
+{
+	initParams.camera_resolution = sl::RESOLUTION::HD720;
+
+	// On Jetson the object detection combined with an heavy depth mode could reduce the frame rate too much
+	initParams.depth_mode = isJetson ? sl::DEPTH_MODE::PERFORMANCE : sl::DEPTH_MODE::ULTRA;
+	initParams.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
+	initParams.sdk_verbose = 1;
+	id = deviceProps.id;
+	initParams.input.setFromCameraID(deviceProps.id);
+	objectDetectionParams.enable_tracking = true; // track people across images flow
+	objectDetectionParams.enable_body_fitting = false; // smooth skeletons moves
+	objectDetectionParams.body_format = sl::BODY_FORMAT::POSE_18;
+	objectDetectionParams.detection_model = isJetson ? sl::DETECTION_MODEL::HUMAN_BODY_FAST : sl::DETECTION_MODEL::HUMAN_BODY_ACCURATE;
+}
+
+//CaptureUnit::CaptureUnit(const CaptureUnit& captureUnit)
+//{
+//	this->id = captureUnit.id;
+//	this->zed = captureUnit.zed;
+//	this->initParams = captureUnit.initParams;
+//	this->objectDetectionParams = captureUnit.objectDetectionParams;
+//	this->positionalTrackingParams = captureUnit.positionalTrackingParams;
+//	this->displayResolution = captureUnit.displayResolution;
+//	this->bodies = captureUnit.bodies;
+//	this->camPose = captureUnit.camPose;
+//	this->ObjectDetectionRuntimeParams = captureUnit.ObjectDetectionRuntimeParams;
+//	this->image_left_ocv = captureUnit.image_left_ocv;
+//	this->image_left = captureUnit.image_left;
+//	this->img_scale = img_scale;
+//}
+
+CaptureUnit::~CaptureUnit()
+{
+	image_left.free();
+	bodies.object_list.clear();
+
+	// Disable modules
+	zed.disableObjectDetection();
+	zed.disablePositionalTracking();
+	zed.close();
+}
+
 void CaptureUnit::parseArgs(int argc, char ** argv)
 {
 	if (argc > 1 && std::string(argv[1]).find(".svo") != std::string::npos) {
@@ -100,7 +143,7 @@ void CaptureUnit::process()
 
 			std::string window_name = "ZED | 2D View " + std::to_string(id);
 
-			int fps = zed.getCurrentFPS();
+			float fps = zed.getCurrentFPS();
 			auto timestamp = utils::time_in_HH_MM_SS_MMM();
 			render_2D(image_left_ocv, img_scale, bodies.object_list, objectDetectionParams.enable_tracking, objectDetectionParams.body_format);
 			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
