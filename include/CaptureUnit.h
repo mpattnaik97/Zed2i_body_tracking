@@ -25,6 +25,8 @@ class CaptureUnit
 	sl::Mat image_left;
 	sl::float2 img_scale;
 
+	std::mutex processMtx;
+
 public:
 
 	CaptureUnit(sl::DeviceProperties deviceProps);	

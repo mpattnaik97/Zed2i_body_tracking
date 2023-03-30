@@ -8,6 +8,12 @@ int main(int argc, char **argv) {
 	std::vector<sl::DeviceProperties> deviceList = sl::Camera::getDeviceList();
 	int nDevices = deviceList.size();
     
+	if (nDevices <= 0)
+	{
+		std::cout << "No Zed camera detected";
+		return EXIT_FAILURE;
+	}
+
 	// Create ZED objects
 	std::vector<std::shared_ptr<CaptureUnit>> captureUnits;
 	captureUnits.reserve(nDevices);

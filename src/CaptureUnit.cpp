@@ -12,7 +12,7 @@ CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
 	initParams.sdk_verbose = 1;
 	id = deviceProps.id;
 	initParams.input.setFromCameraID(deviceProps.id);
-	objectDetectionParams.enable_tracking = true; // track people across images flow
+	objectDetectionParams.enable_tracking = false; // track people across images flow
 	objectDetectionParams.enable_body_fitting = false; // smooth skeletons moves
 	objectDetectionParams.body_format = sl::BODY_FORMAT::POSE_18;
 	objectDetectionParams.detection_model = isJetson ? sl::DETECTION_MODEL::HUMAN_BODY_FAST : sl::DETECTION_MODEL::HUMAN_BODY_ACCURATE;
@@ -129,6 +129,8 @@ void CaptureUnit::process()
 {
 	char key = ' ';
 	while (key != 'q') {
+		
+		std::lock_guard<std::mutex> guard(processMtx);
 
 		// Grab images
 		if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
@@ -143,7 +145,7 @@ void CaptureUnit::process()
 
 			std::string window_name = "ZED | 2D View " + std::to_string(id);
 
-			float fps = zed.getCurrentFPS();
+			int fps = static_cast<int>(zed.getCurrentFPS());
 			auto timestamp = utils::time_in_HH_MM_SS_MMM();
 			render_2D(image_left_ocv, img_scale, bodies.object_list, objectDetectionParams.enable_tracking, objectDetectionParams.body_format);
 			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
