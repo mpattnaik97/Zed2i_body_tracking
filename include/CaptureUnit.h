@@ -12,7 +12,6 @@ const bool isJetson = false;
 
 class CaptureUnit
 {
-	int id;
 	sl::Camera zed;
 	sl::InitParameters initParams;
 	sl::ObjectDetectionParameters objectDetectionParams;
@@ -29,6 +28,8 @@ class CaptureUnit
 
 public:
 
+	int id;
+
 	CaptureUnit(sl::DeviceProperties deviceProps);	
 	//CaptureUnit(const CaptureUnit& captureUnit);
 
@@ -40,6 +41,7 @@ public:
 
 	sl::ERROR_CODE init();
 	void configure();
+	void initProcess();
 	void process();
 	void parseArgs(int argc, char **argv);
 };

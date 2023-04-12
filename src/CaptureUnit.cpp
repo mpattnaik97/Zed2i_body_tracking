@@ -1,4 +1,5 @@
 #include "CaptureUnit.h"
+#include <tchar.h>
 
 bool is_playback = false;
 
@@ -11,6 +12,7 @@ CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
 	initParams.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
 	initParams.sdk_verbose = 1;
 	id = deviceProps.id;
+	//initParams.sdk_gpu_id = id % 2;
 	initParams.input.setFromCameraID(deviceProps.id);
 	objectDetectionParams.enable_tracking = false; // track people across images flow
 	objectDetectionParams.enable_body_fitting = false; // smooth skeletons moves
@@ -88,12 +90,14 @@ void CaptureUnit::parseArgs(int argc, char ** argv)
 
 sl::ERROR_CODE CaptureUnit::init()
 {
+	std::cout << "Opening camera: " << id <<std::endl;
 	auto returned_state = zed.open(initParams);
 	if (returned_state != sl::ERROR_CODE::SUCCESS) {
 		utils::print("Open Camera", returned_state, "\nExit program.");
 		zed.close();
 		return returned_state;
 	}
+	std::cout << "Opening camera: " << id << " successfull" << std::endl;
 
 	returned_state = zed.enablePositionalTracking(positionalTrackingParams);
 	if (returned_state != sl::ERROR_CODE::SUCCESS) {
@@ -125,9 +129,25 @@ void CaptureUnit::configure()
 	ObjectDetectionRuntimeParams.detection_confidence_threshold = 40;
 }
 
+void CaptureUnit::initProcess()
+{
+	auto handle = GetCurrentThread();
+	
+	if (!SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST))
+	{
+		_tprintf(TEXT("Failed to end background mode (%d)\n"), GetLastError());
+	}
+	
+	_tprintf(TEXT("Current thread (id: %d) priority is 0x%x\n"), GetThreadId(handle), GetThreadPriority(handle));
+	
+	process();
+}
+
 void CaptureUnit::process()
 {
 	char key = ' ';
+	std::cout << " Initiating process while loop for camera: " << id << std::endl;
+
 	while (key != 'q') {
 		
 		std::lock_guard<std::mutex> guard(processMtx);
