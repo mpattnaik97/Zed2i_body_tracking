@@ -91,11 +91,16 @@ void render_2D(cv::Mat &left_display, sl::float2 img_scale, std::vector<sl::Obje
 				float distance = round(sqrtf(pow(obj.bounding_box[4].x, 2) + pow(obj.bounding_box[4].y, 2) + pow(obj.bounding_box[4].z, 2)) / 10) / 100;
 				char distanceStringBuffer[20];
 				sprintf(distanceStringBuffer, "Distance: %.2f", distance);				
-				int x = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].x));
-				x = std::min(left_display.size().width - 30, x);
-				int y = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].y));
-				y = std::min(left_display.size().height - 30, y);
-				cv::putText(left_display, distanceStringBuffer, cv::Point(x, y), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
+				//int x = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].x));
+				//x = std::min(left_display.size().width - 30, x);
+				//int y = std::max(30, static_cast<int>(obj.head_bounding_box_2d[0].y));
+				//y = std::min(left_display.size().height - 30, y);
+				int x = static_cast<int>(img_scale.x * obj.bounding_box_2d[0].x);
+				int y = static_cast<int>(img_scale.y * obj.bounding_box_2d[0].y);
+				int x1 = static_cast<int>(img_scale.x * obj.bounding_box_2d[2].x);
+				int y1 = static_cast<int>(img_scale.y * obj.bounding_box_2d[2].y);
+				cv::rectangle(left_display, cv::Point(x, y), cv::Point(x1, y1), cv::Scalar(110, 50, 200));
+				cv::putText(left_display, distanceStringBuffer, cv::Point(x - 10, y - 10), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
             }
 
         }

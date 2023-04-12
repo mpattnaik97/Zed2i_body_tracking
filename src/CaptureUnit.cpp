@@ -119,7 +119,7 @@ sl::ERROR_CODE CaptureUnit::init()
 void CaptureUnit::configure()
 {
 	sl::CameraConfiguration config = zed.getCameraInformation().camera_configuration;
-	displayResolution = sl::Resolution(std::min((int)config.resolution.width, 1280), std::min((int)config.resolution.height, 720));
+	displayResolution = sl::Resolution(std::min((int)config.resolution.width, 640), std::min((int)config.resolution.height, 480));
 	
 	image_left_ocv = cv::Mat(displayResolution.height, displayResolution.width, CV_8UC4, 1);
 	image_left = sl::Mat(displayResolution, sl::MAT_TYPE::U8_C4, image_left_ocv.data, image_left_ocv.step);
@@ -168,8 +168,8 @@ void CaptureUnit::process()
 			int fps = static_cast<int>(zed.getCurrentFPS());
 			auto timestamp = utils::time_in_HH_MM_SS_MMM();
 			render_2D(image_left_ocv, img_scale, bodies.object_list, objectDetectionParams.enable_tracking, objectDetectionParams.body_format);
-			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
-			cv::putText(image_left_ocv, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 0));
+			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
+			cv::putText(image_left_ocv, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
 			cv::imshow(window_name, image_left_ocv);
 			key = cv::waitKey(10);
 		}
