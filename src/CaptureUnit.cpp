@@ -3,7 +3,7 @@
 
 bool is_playback = false;
 
-CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
+CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)	
 {
 	initParams.camera_resolution = sl::RESOLUTION::HD720;
 
@@ -31,7 +31,7 @@ CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
 //	this->bodies = captureUnit.bodies;
 //	this->camPose = captureUnit.camPose;
 //	this->ObjectDetectionRuntimeParams = captureUnit.ObjectDetectionRuntimeParams;
-//	this->image_left_ocv = captureUnit.image_left_ocv;
+//	this->currentImage = captureUnit.currentImage;
 //	this->image_left = captureUnit.image_left;
 //	this->img_scale = img_scale;
 //}
@@ -90,14 +90,12 @@ void CaptureUnit::parseArgs(int argc, char ** argv)
 
 sl::ERROR_CODE CaptureUnit::init()
 {
-	std::cout << "Opening camera: " << id <<std::endl;
 	auto returned_state = zed.open(initParams);
 	if (returned_state != sl::ERROR_CODE::SUCCESS) {
 		utils::print("Open Camera", returned_state, "\nExit program.");
 		zed.close();
 		return returned_state;
 	}
-	std::cout << "Opening camera: " << id << " successfull" << std::endl;
 
 	returned_state = zed.enablePositionalTracking(positionalTrackingParams);
 	if (returned_state != sl::ERROR_CODE::SUCCESS) {
@@ -119,10 +117,10 @@ sl::ERROR_CODE CaptureUnit::init()
 void CaptureUnit::configure()
 {
 	sl::CameraConfiguration config = zed.getCameraInformation().camera_configuration;
-	displayResolution = sl::Resolution(std::min((int)config.resolution.width, 640), std::min((int)config.resolution.height, 480));
+	displayResolution = sl::Resolution(std::min((int)config.resolution.width, 1280), std::min((int)config.resolution.height, 720));
 	
-	image_left_ocv = cv::Mat(displayResolution.height, displayResolution.width, CV_8UC4, 1);
-	image_left = sl::Mat(displayResolution, sl::MAT_TYPE::U8_C4, image_left_ocv.data, image_left_ocv.step);
+	currentImage = cv::Mat(displayResolution.height, displayResolution.width, CV_8UC4, 1);
+	image_left = sl::Mat(displayResolution, sl::MAT_TYPE::U8_C4, currentImage.data, currentImage.step);
 	img_scale = sl::float2(displayResolution.width / (float)config.resolution.width, displayResolution.height / (float)config.resolution.height);
 	
 	camPose.pose_data.setIdentity();
@@ -143,34 +141,58 @@ void CaptureUnit::initProcess()
 	process();
 }
 
+bool CaptureUnit::checkGoodFunction()
+{
+	imageDiff = currentImage.clone();
+	std::vector<int> nz;
+	if (!prevImage.empty())
+	{
+		cv::Mat img1;
+		cv::Mat img2;
+
+		cv::cvtColor(currentImage, img1, cv::COLOR_RGB2GRAY);
+		cv::cvtColor(prevImage, img2, cv::COLOR_RGB2GRAY);
+		cv::absdiff(img1, img2, imageDiff);
+		cv::threshold(imageDiff, imageDiff, 5, 255, cv::THRESH_BINARY);
+		if (cv::countNonZero(imageDiff) < 1)
+			return false;
+	}
+	prevImage = currentImage.clone();
+	return true;
+}
+
 void CaptureUnit::process()
 {
 	char key = ' ';
-	std::cout << " Initiating process while loop for camera: " << id << std::endl;
 
 	while (key != 'q') {
 		
 		std::lock_guard<std::mutex> guard(processMtx);
 
 		// Grab images
-		if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
+		auto result = zed.grab();
+		if (result == sl::ERROR_CODE::SUCCESS)
+		{
+			//OCV View
+			zed.retrieveImage(image_left, sl::VIEW::LEFT, sl::MEM::CPU, displayResolution);
 
 			// Retrieve Detected Human Bodies
 			zed.retrieveObjects(bodies, ObjectDetectionRuntimeParams);
 
-			//OCV View
-			zed.retrieveImage(image_left, sl::VIEW::LEFT, sl::MEM::CPU, displayResolution);
-
 			zed.getPosition(camPose, sl::REFERENCE_FRAME::WORLD);
+
+			if (!checkGoodFunction())
+				std::cout << "Camera[" << id << "]: Error - Video Feed Frozen" << std::endl;
 
 			std::string window_name = "ZED | 2D View " + std::to_string(id);
 
 			int fps = static_cast<int>(zed.getCurrentFPS());
 			auto timestamp = utils::time_in_HH_MM_SS_MMM();
-			render_2D(image_left_ocv, img_scale, bodies.object_list, objectDetectionParams.enable_tracking, objectDetectionParams.body_format);
-			cv::putText(image_left_ocv, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
-			cv::putText(image_left_ocv, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
-			cv::imshow(window_name, image_left_ocv);
+			render_2D(currentImage, img_scale, bodies.object_list, objectDetectionParams.enable_tracking, objectDetectionParams.body_format);
+			cv::putText(currentImage, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
+			cv::putText(currentImage, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
+			cv::imshow(window_name, currentImage);
+			cv::imshow("diif_image", imageDiff);
 			key = cv::waitKey(10);
 		}
 	}

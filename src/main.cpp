@@ -31,18 +31,14 @@ int main(int argc, char **argv) {
 	int i = 0;
 	for (auto& captureUnit : captureUnits)
 	{
-		std::cout << "Calling captureUnit->init() for camera: " << captureUnit->id << std::endl;
 		auto returned_state = captureUnit->init();
 		if (returned_state != sl::ERROR_CODE::SUCCESS)
 			return EXIT_FAILURE;
-		std::cout << "CaptureUnit->init() for camera: " << captureUnit->id << " successfull" << std::endl;
 
 		captureUnit->parseArgs(argc, argv);
 		captureUnit->configure();
 		threads[i++] = std::thread(&CaptureUnit::initProcess, captureUnit);
 	}
-
-	std::cout << "Initiating thread join!" << std::endl;
 
 	for (auto& th : threads)
 	{

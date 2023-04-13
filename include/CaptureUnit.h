@@ -20,7 +20,9 @@ class CaptureUnit
 	sl::Objects bodies;
 	sl::Pose camPose;
 	sl::ObjectDetectionRuntimeParameters ObjectDetectionRuntimeParams;
-	cv::Mat image_left_ocv;
+	cv::Mat currentImage;
+	cv::Mat prevImage;
+	cv::Mat imageDiff;
 	sl::Mat image_left;
 	sl::float2 img_scale;
 
@@ -44,5 +46,6 @@ public:
 	void initProcess();
 	void process();
 	void parseArgs(int argc, char **argv);
+	bool checkGoodFunction();
 };
 
