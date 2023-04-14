@@ -117,7 +117,7 @@ sl::ERROR_CODE CaptureUnit::init()
 void CaptureUnit::configure()
 {
 	sl::CameraConfiguration config = zed.getCameraInformation().camera_configuration;
-	displayResolution = sl::Resolution(std::min((int)config.resolution.width, 1280), std::min((int)config.resolution.height, 720));
+	displayResolution = sl::Resolution(std::min((int)config.resolution.width, 640), std::min((int)config.resolution.height, 480));
 	
 	currentImage = cv::Mat(displayResolution.height, displayResolution.width, CV_8UC4, 1);
 	image_left = sl::Mat(displayResolution, sl::MAT_TYPE::U8_C4, currentImage.data, currentImage.step);
@@ -127,32 +127,18 @@ void CaptureUnit::configure()
 	ObjectDetectionRuntimeParams.detection_confidence_threshold = 40;
 }
 
-void CaptureUnit::initProcess()
-{
-	auto handle = GetCurrentThread();
-	
-	if (!SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST))
-	{
-		_tprintf(TEXT("Failed to end background mode (%d)\n"), GetLastError());
-	}
-	
-	_tprintf(TEXT("Current thread (id: %d) priority is 0x%x\n"), GetThreadId(handle), GetThreadPriority(handle));
-	
-	process();
-}
-
 bool CaptureUnit::checkGoodFunction()
 {
 	imageDiff = currentImage.clone();
-	std::vector<int> nz;
 	if (!prevImage.empty())
 	{
-		cv::Mat img1;
-		cv::Mat img2;
+		//cv::Mat img1;
+		//cv::Mat img2;
 
-		cv::cvtColor(currentImage, img1, cv::COLOR_RGB2GRAY);
-		cv::cvtColor(prevImage, img2, cv::COLOR_RGB2GRAY);
-		cv::absdiff(img1, img2, imageDiff);
+		//cv::cvtColor(currentImage, img1, cv::COLOR_RGB2GRAY);
+		//cv::cvtColor(prevImage, img2, cv::COLOR_RGB2GRAY);
+		cv::absdiff(currentImage, prevImage, imageDiff);
+		cv::cvtColor(imageDiff, imageDiff, cv::COLOR_RGB2GRAY);
 		cv::threshold(imageDiff, imageDiff, 5, 255, cv::THRESH_BINARY);
 		if (cv::countNonZero(imageDiff) < 1)
 			return false;
@@ -161,8 +147,21 @@ bool CaptureUnit::checkGoodFunction()
 	return true;
 }
 
+void CaptureUnit::raisePriority()
+{
+	auto handle = GetCurrentThread();
+
+	if (!SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST))
+	{
+		_tprintf(TEXT("Failed to end background mode (%d)\n"), GetLastError());
+	}
+
+	_tprintf(TEXT("Current thread (id: %d) priority is 0x%x\n"), GetThreadId(handle), GetThreadPriority(handle));
+}
+
 void CaptureUnit::process()
 {
+	raisePriority();
 	char key = ' ';
 
 	while (key != 'q') {
@@ -192,7 +191,7 @@ void CaptureUnit::process()
 			cv::putText(currentImage, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
 			cv::putText(currentImage, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
 			cv::imshow(window_name, currentImage);
-			cv::imshow("diif_image", imageDiff);
+			//cv::imshow("diif_image", imageDiff);
 			key = cv::waitKey(10);
 		}
 	}

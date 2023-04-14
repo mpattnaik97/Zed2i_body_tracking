@@ -43,8 +43,9 @@ public:
 
 	sl::ERROR_CODE init();
 	void configure();
-	void initProcess();
+	//void initProcess();
 	void process();
+	void raisePriority();
 	void parseArgs(int argc, char **argv);
 	bool checkGoodFunction();
 };

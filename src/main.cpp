@@ -37,13 +37,15 @@ int main(int argc, char **argv) {
 
 		captureUnit->parseArgs(argc, argv);
 		captureUnit->configure();
-		threads[i++] = std::thread(&CaptureUnit::initProcess, captureUnit);
+		threads[i++] = std::thread(&CaptureUnit::process, captureUnit);
 	}
 
 	for (auto& th : threads)
 	{
 		th.join();
 	}
+
+
     return EXIT_SUCCESS;
 }
 
