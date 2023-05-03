@@ -1,8 +1,5 @@
-#pragma once
-
 #include "CaptureUnit.h"
 #include "TrackingViewer.hpp"
-//#include <pthread.h>
 
 int main(int argc, char **argv) {
 
@@ -37,15 +34,27 @@ int main(int argc, char **argv) {
 
 		captureUnit->parseArgs(argc, argv);
 		captureUnit->configure();
-		threads[i++] = std::thread(&CaptureUnit::process, captureUnit);
+		threads[i] = std::thread(&CaptureUnit::process, captureUnit);
+
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		CPU_SET(i, &cpuset);
+		int rc = pthread_setaffinity_np(threads[i].native_handle(), sizeof(cpu_set_t), &cpuset);
+
+		if (rc != 0) {
+			std::cout << "Error calling pthread_setaffinity_np: " << rc << "\n";
+		}		
+
+		int policy = SCHED_BATCH;
+		struct sched_param param = {.sched_priority = sched_get_priority_max(policy)};
+		pthread_setschedparam(threads[i++].native_handle(), policy, &param);	
+
 	}
 
-	for (auto& th : threads)
+	for(auto &th : threads)
 	{
 		th.join();
 	}
-
-
     return EXIT_SUCCESS;
 }
 

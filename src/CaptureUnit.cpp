@@ -1,5 +1,5 @@
 #include "CaptureUnit.h"
-#include <tchar.h>
+#include <sys/resource.h>
 
 bool is_playback = false;
 
@@ -14,10 +14,10 @@ CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
 	id = deviceProps.id;
 	//initParams.sdk_gpu_id = id % 2;
 	initParams.input.setFromCameraID(deviceProps.id);
-	objectDetectionParams.enable_tracking = false; // track people across images flow
-	objectDetectionParams.enable_body_fitting = false; // smooth skeletons moves
-	objectDetectionParams.body_format = sl::BODY_FORMAT::POSE_18;
-	objectDetectionParams.detection_model = isJetson ? sl::DETECTION_MODEL::HUMAN_BODY_FAST : sl::DETECTION_MODEL::HUMAN_BODY_ACCURATE;
+	bodyTrackingParams.enable_tracking = false; // track people across images flow
+	bodyTrackingParams.enable_body_fitting = false; // smooth skeletons moves
+	bodyTrackingParams.body_format = sl::BODY_FORMAT::BODY_18;
+	bodyTrackingParams.detection_model = isJetson ? sl::BODY_TRACKING_MODEL::HUMAN_BODY_FAST : sl::BODY_TRACKING_MODEL::HUMAN_BODY_ACCURATE;
 }
 
 //CaptureUnit::CaptureUnit(const CaptureUnit& captureUnit)
@@ -25,12 +25,12 @@ CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
 //	this->id = captureUnit.id;
 //	this->zed = captureUnit.zed;
 //	this->initParams = captureUnit.initParams;
-//	this->objectDetectionParams = captureUnit.objectDetectionParams;
+//	this->bodyTrackingParams = captureUnit.bodyTrackingParams;
 //	this->positionalTrackingParams = captureUnit.positionalTrackingParams;
 //	this->displayResolution = captureUnit.displayResolution;
 //	this->bodies = captureUnit.bodies;
 //	this->camPose = captureUnit.camPose;
-//	this->ObjectDetectionRuntimeParams = captureUnit.ObjectDetectionRuntimeParams;
+//	this->bodyTrackingRuntimeParams = captureUnit.bodyTrackingRuntimeParams;
 //	this->currentImage = captureUnit.currentImage;
 //	this->image_left = captureUnit.image_left;
 //	this->img_scale = img_scale;
@@ -39,12 +39,14 @@ CaptureUnit::CaptureUnit(sl::DeviceProperties deviceProps)
 CaptureUnit::~CaptureUnit()
 {
 	image_left.free();
-	bodies.object_list.clear();
+	bodies.body_list.clear();
 
 	// Disable modules
-	zed.disableObjectDetection();
+	zed.disableBodyTracking();
 	zed.disablePositionalTracking();
 	zed.close();
+
+	printf("Distructor for CaptureUnit[%d] executed successfully\n", id);
 }
 
 void CaptureUnit::parseArgs(int argc, char ** argv)
@@ -97,14 +99,14 @@ sl::ERROR_CODE CaptureUnit::init()
 		return returned_state;
 	}
 
-	returned_state = zed.enablePositionalTracking(positionalTrackingParams);
-	if (returned_state != sl::ERROR_CODE::SUCCESS) {
-		utils::print("enable Positional Tracking", returned_state, "\nExit program.");
-		zed.close();
-		return returned_state;
-	}
+	// returned_state = zed.enablePositionalTracking(positionalTrackingParams);
+	// if (returned_state != sl::ERROR_CODE::SUCCESS) {
+	// 	utils::print("enable Positional Tracking", returned_state, "\nExit program.");
+	// 	zed.close();
+	// 	return returned_state;
+	// }
 
-	returned_state = zed.enableObjectDetection(objectDetectionParams);
+	returned_state = zed.enableBodyTracking(bodyTrackingParams);
 	if (returned_state != sl::ERROR_CODE::SUCCESS) {
 		utils::print("enable Object Detection", returned_state, "\nExit program.");
 		zed.close();
@@ -123,13 +125,14 @@ void CaptureUnit::configure()
 	image_left = sl::Mat(displayResolution, sl::MAT_TYPE::U8_C4, currentImage.data, currentImage.step);
 	img_scale = sl::float2(displayResolution.width / (float)config.resolution.width, displayResolution.height / (float)config.resolution.height);
 	
-	camPose.pose_data.setIdentity();
-	ObjectDetectionRuntimeParams.detection_confidence_threshold = 40;
+	// camPose.pose_data.setIdentity();
+	bodyTrackingRuntimeParams.detection_confidence_threshold = 40;
 }
 
 bool CaptureUnit::checkGoodFunction()
 {
-	imageDiff = currentImage.clone();
+	std::call_once(checkGoodFunctionFlag, [&](){imageDiff =  currentImage.clone();});
+	
 	if (!prevImage.empty())
 	{
 		//cv::Mat img1;
@@ -147,27 +150,20 @@ bool CaptureUnit::checkGoodFunction()
 	return true;
 }
 
-void CaptureUnit::raisePriority()
-{
-	auto handle = GetCurrentThread();
-
-	if (!SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST))
-	{
-		_tprintf(TEXT("Failed to end background mode (%d)\n"), GetLastError());
-	}
-
-	_tprintf(TEXT("Current thread (id: %d) priority is 0x%x\n"), GetThreadId(handle), GetThreadPriority(handle));
-}
-
 void CaptureUnit::process()
 {
-	raisePriority();
+	// setpriority(PRIO_PROCESS, 0, -20);
+
 	char key = ' ';
 
+	int i = 0;
+
+	std::string window_name = "ZED | 2D View " + std::to_string(id);	
+	
 	while (key != 'q') {
 		
 		std::lock_guard<std::mutex> guard(processMtx);
-
+		
 		// Grab images
 		auto result = zed.grab();
 		if (result == sl::ERROR_CODE::SUCCESS)
@@ -176,23 +172,23 @@ void CaptureUnit::process()
 			zed.retrieveImage(image_left, sl::VIEW::LEFT, sl::MEM::CPU, displayResolution);
 
 			// Retrieve Detected Human Bodies
-			zed.retrieveObjects(bodies, ObjectDetectionRuntimeParams);
+			zed.retrieveBodies(bodies, bodyTrackingRuntimeParams);
 
-			zed.getPosition(camPose, sl::REFERENCE_FRAME::WORLD);
+			// zed.getPosition(camPose, sl::REFERENCE_FRAME::WORLD);
 
 			if (!checkGoodFunction())
-				std::cout << "Camera[" << id << "]: Error - Video Feed Frozen" << std::endl;
-
-			std::string window_name = "ZED | 2D View " + std::to_string(id);
+				std::cout << "Camera[" << id << "]: Error - Video Feed Frozen" << std::endl;			
 
 			int fps = static_cast<int>(zed.getCurrentFPS());
 			auto timestamp = utils::time_in_HH_MM_SS_MMM();
-			render_2D(currentImage, img_scale, bodies.object_list, objectDetectionParams.enable_tracking, objectDetectionParams.body_format);
+			render_2D(currentImage, img_scale, bodies.body_list, bodyTrackingParams.enable_tracking, false);
 			cv::putText(currentImage, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
 			cv::putText(currentImage, "Timestamp: " + timestamp, cv::Point(10, 60), cv::FONT_HERSHEY_DUPLEX, 0.6, cv::Scalar(0, 0, 0));
 			cv::imshow(window_name, currentImage);
 			//cv::imshow("diif_image", imageDiff);
-			key = cv::waitKey(10);
-		}
+			key = cv::waitKey(1);
+		}			
 	}
+	
+	cv::destroyWindow(window_name);
 }

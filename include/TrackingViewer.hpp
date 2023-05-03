@@ -1,7 +1,12 @@
 #ifndef TRACKING_VIEWER_HPP
 #define TRACKING_VIEWER_HPP
 
-#include "stdafx.h"
+#include <iostream>
+#include <deque>
+#include <math.h>
+
+#include <sl/Camera.hpp>
+#include <opencv2/opencv.hpp>
 
 // -------------------------------------------------
 //            2D LEFT VIEW
@@ -14,7 +19,7 @@ inline sl::float2 getImagePosition(std::vector<sl::uint2> &bounding_box_image, s
     return position;
 }
 
-void render_2D(cv::Mat &left, sl::float2 img_scale, std::vector<sl::ObjectData> &objects, bool isTrackingON, sl::BODY_FORMAT body_format);
+void render_2D(cv::Mat &left, sl::float2 img_scale, std::vector<sl::BodyData> & bodies, bool isTrackingON, bool fastRender=true);
 
 inline cv::Mat slMat2cvMat(sl::Mat& input) {
     // Mapping between MAT_TYPE and CV_TYPE
@@ -44,14 +49,14 @@ inline cv::Mat slMat2cvMat(sl::Mat& input) {
 
 
 float const id_colors[8][3] = {
-	{ 232.0f, 176.0f ,59.0f },
-	{ 175.0f, 208.0f ,25.0f },
-	{ 102.0f, 205.0f ,105.0f},
-	{ 185.0f, 0.0f   ,255.0f},
-	{ 99.0f, 107.0f  ,252.0f},
-	{252.0f, 225.0f, 8.0f},
-	{167.0f, 130.0f, 141.0f},
-	{194.0f, 72.0f, 113.0f}
+    { 232.0f, 176.0f, 59.0f},
+    { 175.0f, 208.0f, 25.0f},
+    { 102.0f, 205.0f, 105.0f},
+    { 185.0f, 0.0f, 255.0f},
+    { 99.0f, 107.0f, 252.0f},
+    {252.0f, 225.0f, 8.0f},
+    {167.0f, 130.0f, 141.0f},
+    {194.0f, 72.0f, 113.0f}
 };
 
 inline cv::Scalar generateColorID_u(int idx) {
@@ -62,14 +67,14 @@ inline cv::Scalar generateColorID_u(int idx) {
 
 inline sl::float4 generateColorID_f(int idx) {
     auto clr_u = generateColorID_u(idx);
-    return sl::float4(static_cast<float>(clr_u.val[0]) / 255.f, static_cast<float>(clr_u.val[1]) / 255.f, static_cast<float>(clr_u.val[2]) / 255.f, 1.f);
+    return sl::float4(static_cast<float> (clr_u.val[0]) / 255.f, static_cast<float> (clr_u.val[1]) / 255.f, static_cast<float> (clr_u.val[2]) / 255.f, 1.f);
 }
 
-inline bool renderObject(const sl::ObjectData& i, const bool isTrackingON) {
-	if (isTrackingON)
-		return (i.tracking_state == sl::OBJECT_TRACKING_STATE::OK);
-	else
-		return (i.tracking_state == sl::OBJECT_TRACKING_STATE::OK || i.tracking_state == sl::OBJECT_TRACKING_STATE::OFF);
+inline bool renderObject(const sl::BodyData& i, const bool isTrackingON) {
+    if (isTrackingON)
+        return (i.tracking_state == sl::OBJECT_TRACKING_STATE::OK);
+    else
+        return (i.tracking_state == sl::OBJECT_TRACKING_STATE::OK || i.tracking_state == sl::OBJECT_TRACKING_STATE::OFF);
 }
 
 float const class_colors[6][3] = {
@@ -88,17 +93,17 @@ inline sl::float4 getColorClass(int idx) {
 }
 
 template<typename T>
-inline uchar _applyFading(T val, float current_alpha, double current_clr){
-     return  static_cast<uchar>(current_alpha * current_clr + (1.0 - current_alpha) * val);
+inline uchar _applyFading(T val, float current_alpha, double current_clr) {
+    return static_cast<uchar> (current_alpha * current_clr + (1.0 - current_alpha) * val);
 }
 
-inline cv::Vec4b applyFading(cv::Scalar val, float current_alpha, cv::Scalar current_clr){
+inline cv::Vec4b applyFading(cv::Scalar val, float current_alpha, cv::Scalar current_clr) {
     cv::Vec4b out;
-     out[0] = _applyFading(val.val[0], current_alpha, current_clr.val[0]);
-     out[1] = _applyFading(val.val[1], current_alpha, current_clr.val[1]);
-     out[2] = _applyFading(val.val[2], current_alpha, current_clr.val[2]);
-     out[3] = 255;
-     return out;
+    out[0] = _applyFading(val.val[0], current_alpha, current_clr.val[0]);
+    out[1] = _applyFading(val.val[1], current_alpha, current_clr.val[1]);
+    out[2] = _applyFading(val.val[2], current_alpha, current_clr.val[2]);
+    out[3] = 255;
+    return out;
 }
 
 inline void drawVerticalLine(
